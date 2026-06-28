@@ -1,0 +1,11 @@
+app:
+  name: "StreamOps"
+  environment: "local"
+
+http:
+  host: "127.0.0.1"
+  port: 7317
+
+logging:
+  level: "info"
+  format: "text"
