@@ -7,8 +7,10 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"github.com/oliviersorine/StreamOps/src/config"
-	"github.com/oliviersorine/StreamOps/src/logging"
+	"github.com/oliviersorine/StreamOps/internal/api"
+	"github.com/oliviersorine/StreamOps/internal/config"
+	"github.com/oliviersorine/StreamOps/internal/events"
+	"github.com/oliviersorine/StreamOps/internal/logging"
 )
 
 var version = "dev"
@@ -22,18 +24,18 @@ func main() {
 	command := os.Args[1]
 
 	switch command {
-	case "start":
-		if err := runStart(); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
-		}
-	case "version":
-		fmt.Println(version)
+		case "start":
+			if err := runStart(); err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				os.Exit(1)
+			}
+		case "version":
+			fmt.Println(version)
 
-	default:
-		fmt.Fprintf(os.Stderr, "Unknown command: %v\n", command)
-		printUsage()
-		os.Exit(2)
+		default:
+			fmt.Fprintf(os.Stderr, "Unknown command: %v\n", command)
+			printUsage()
+			os.Exit(2)
 	}
 }
 
@@ -60,11 +62,13 @@ func runStart() error {
 		slog.Int("http_port", cfg.HTTP.Port),
 	)
 
-	logger.Info("press Ctrl+C to stop")
+	eventStore := events.NewStore(100)
 
-	<-ctx.Done()
+	apiServer := api.NewServer(cfg.HTTP, logger, eventStore, version)
+	if err := apiServer.Start(ctx); err != nil {
+		return err
+	}
 
-	logger.Info("shutdown requested")
 	logger.Info("StreamOps stopped")
 
 	return nil

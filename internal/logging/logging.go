@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/oliviersorine/StreamOps/src/config"
+	"github.com/oliviersorine/StreamOps/internal/config"
 )
 
 func New(cfg config.LoggingConfig) *slog.Logger {
