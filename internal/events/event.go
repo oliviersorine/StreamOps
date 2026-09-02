@@ -7,19 +7,19 @@ import (
 )
 
 type StreamEvent struct {
-	ID	string	`json:"id"`
-	Source	string	`json:"source"`
-	Type	string	`json:"type"`
-	Payload	map[string]any	`json:"payload"`
-	CreatedAt	time.Time	`json:"created_at"`
+	ID        string         `json:"id"`
+	Source    string         `json:"source"`
+	Type      string         `json:"type"`
+	Payload   map[string]any `json:"payload"`
+	CreatedAt time.Time      `json:"created_at"`
 }
 
 func New(source string, eventType string, payload map[string]any) StreamEvent {
 	return StreamEvent{
-		ID: newID(),
-		Source: source,
-		Type: eventType,
-		Payload: payload,
+		ID:        newID(),
+		Source:    source,
+		Type:      eventType,
+		Payload:   payload,
 		CreatedAt: time.Now().UTC(),
 	}
 }

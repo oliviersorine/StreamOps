@@ -2,34 +2,34 @@ package config
 
 import (
 	"fmt"
-	"os"
 	"gopkg.in/yaml.v3"
+	"os"
 )
 
 type Config struct {
-	App AppConfig `yaml:"app"`
-	HTTP HTTPConfig `yaml:"http"`
+	App     AppConfig     `yaml:"app"`
+	HTTP    HTTPConfig    `yaml:"http"`
 	Logging LoggingConfig `yaml:"logging"`
 }
 
 type AppConfig struct {
-	Name string `yaml:"name"`
+	Name        string `yaml:"name"`
 	Environment string `yaml:"environment"`
 }
 
 type HTTPConfig struct {
 	Host string `yaml:"host"`
-	Port int `yaml:"port"`
+	Port int    `yaml:"port"`
 }
 
 type LoggingConfig struct {
-	Level string `yaml:"level"`
+	Level  string `yaml:"level"`
 	Format string `yaml:"format"`
 }
 
 func Load(path string) (Config, error) {
 	fileContent, err := os.ReadFile(path)
-	if err!=nil {
+	if err != nil {
 		return Config{}, fmt.Errorf("read config file: %w", err)
 	}
 

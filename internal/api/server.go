@@ -14,23 +14,26 @@ import (
 )
 
 type Server struct {
-	cfg config.HTTPConfig
-	logger *slog.Logger
+	cfg        config.HTTPConfig
+	logger     *slog.Logger
 	eventStore *events.Store
-	version string
+	eventBus   *events.Bus
+	version    string
 }
 
 func NewServer(
 	cfg config.HTTPConfig,
 	logger *slog.Logger,
 	eventStore *events.Store,
+	eventBus *events.Bus,
 	version string,
 ) *Server {
 	return &Server{
-		cfg: cfg,
-		logger: logger,
+		cfg:        cfg,
+		logger:     logger,
 		eventStore: eventStore,
-		version: version,
+		eventBus:   eventBus,
+		version:    version,
 	}
 }
 
@@ -43,8 +46,8 @@ func (s *Server) Start(ctx context.Context) error {
 	mux.HandleFunc("POST /events", s.handlePostEvent)
 
 	server := &http.Server{
-		Addr:    s.address(),
-		Handler: s.recoveryMiddleware(s.requestIDMiddleware(s.loggingMiddleware(mux))),
+		Addr:              s.address(),
+		Handler:           s.recoveryMiddleware(s.requestIDMiddleware(s.loggingMiddleware(mux))),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
@@ -62,26 +65,26 @@ func (s *Server) Start(ctx context.Context) error {
 	}()
 
 	select {
-		case <-ctx.Done():
-			s.logger.Info("Shutting down server is requested")
-			
-			shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancel()
+	case <-ctx.Done():
+		s.logger.Info("Shutting down server is requested")
 
-			if err := server.Shutdown(shutdownCtx); err != nil {
-				return fmt.Errorf("failed to shutdown server: %w", err)
-			}
-			
-			s.logger.Info("Server has been shut down")
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
 
-			return nil
+		if err := server.Shutdown(shutdownCtx); err != nil {
+			return fmt.Errorf("failed to shutdown server: %w", err)
+		}
 
-		case err := <-errCh:
-			if err != nil {
-				return fmt.Errorf("Start server error: %w", err)
-			}
+		s.logger.Info("Server has been shut down")
 
-			return nil
+		return nil
+
+	case err := <-errCh:
+		if err != nil {
+			return fmt.Errorf("Start server error: %w", err)
+		}
+
+		return nil
 	}
 }
 
@@ -108,7 +111,7 @@ func (s *Server) handleListEvents(w http.ResponseWriter, r *http.Request) {
 }
 
 type eventRequest struct {
-	Type string `json:"type"`
+	Type    string         `json:"type"`
 	Payload map[string]any `json:"payload"`
 }
 
@@ -131,10 +134,14 @@ func (s *Server) handlePostEvent(w http.ResponseWriter, r *http.Request) {
 
 	event := events.New("test", request.Type, request.Payload)
 
-	s.eventStore.Add(event)
+	err := s.eventBus.Publish(r.Context(), event)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "publish_error", fmt.Sprintf("Failed to publish event: %v", err))
+		return
+	}
 
 	s.logger.Info(
-		"Event added", 
+		"Event published",
 		slog.String("event_id", event.ID),
 		slog.String("event_type", event.Type),
 	)

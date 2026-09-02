@@ -3,14 +3,14 @@ package main
 import (
 	"context"
 	"fmt"
-	"log/slog"
-	"os"
-	"os/signal"
-	"syscall"
 	"github.com/oliviersorine/StreamOps/internal/api"
 	"github.com/oliviersorine/StreamOps/internal/config"
 	"github.com/oliviersorine/StreamOps/internal/events"
 	"github.com/oliviersorine/StreamOps/internal/logging"
+	"log/slog"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 var version = "dev"
@@ -24,18 +24,18 @@ func main() {
 	command := os.Args[1]
 
 	switch command {
-		case "start":
-			if err := runStart(); err != nil {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-				os.Exit(1)
-			}
-		case "version":
-			fmt.Println(version)
+	case "start":
+		if err := runStart(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+	case "version":
+		fmt.Println(version)
 
-		default:
-			fmt.Fprintf(os.Stderr, "Unknown command: %v\n", command)
-			printUsage()
-			os.Exit(2)
+	default:
+		fmt.Fprintf(os.Stderr, "Unknown command: %v\n", command)
+		printUsage()
+		os.Exit(2)
 	}
 }
 
@@ -63,8 +63,21 @@ func runStart() error {
 	)
 
 	eventStore := events.NewStore(100)
+	eventBus := events.NewBus(100)
 
-	apiServer := api.NewServer(cfg.HTTP, logger, eventStore, version)
+	eventRoute := events.NewRouter(
+		logger,
+		eventBus.Events(),
+		eventStore,
+	)
+
+	go func() {
+		if err := eventRoute.Start(ctx); err != nil {
+			logger.Error("Error starting event route", slog.Any("error", err))
+		}
+	}()
+
+	apiServer := api.NewServer(cfg.HTTP, logger, eventStore, eventBus, version)
 	if err := apiServer.Start(ctx); err != nil {
 		return err
 	}

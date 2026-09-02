@@ -3,15 +3,15 @@ package events
 import "sync"
 
 type Store struct {
-	mu sync.RWMutex
+	mu     sync.RWMutex
 	events []StreamEvent
-	max int
+	max    int
 }
 
 func NewStore(max int) *Store {
-	return &Store {
+	return &Store{
 		events: make([]StreamEvent, 0, max),
-		max: max,
+		max:    max,
 	}
 }
 
