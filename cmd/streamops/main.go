@@ -3,14 +3,16 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/oliviersorine/StreamOps/internal/api"
-	"github.com/oliviersorine/StreamOps/internal/config"
-	"github.com/oliviersorine/StreamOps/internal/events"
-	"github.com/oliviersorine/StreamOps/internal/logging"
 	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/oliviersorine/StreamOps/internal/api"
+	"github.com/oliviersorine/StreamOps/internal/config"
+	"github.com/oliviersorine/StreamOps/internal/events"
+	"github.com/oliviersorine/StreamOps/internal/logging"
+	"github.com/oliviersorine/StreamOps/internal/obs"
 )
 
 var version = "dev"
@@ -77,7 +79,21 @@ func runStart() error {
 		}
 	}()
 
-	apiServer := api.NewServer(cfg.HTTP, logger, eventStore, eventBus, version)
+	obsClient := obs.NewWebSocketClient(logger, cfg.OBS)
+
+	if err := obsClient.Connect(ctx); err != nil {
+		logger.Error("Error connecting to OBS", slog.Any("error", err))
+		return err
+	}
+
+	apiServer := api.NewServer(
+		cfg.HTTP,
+		logger,
+		eventStore,
+		eventBus,
+		obsClient,
+		version,
+	)
 	if err := apiServer.Start(ctx); err != nil {
 		return err
 	}

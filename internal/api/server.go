@@ -11,6 +11,7 @@ import (
 
 	"github.com/oliviersorine/StreamOps/internal/config"
 	"github.com/oliviersorine/StreamOps/internal/events"
+	"github.com/oliviersorine/StreamOps/internal/obs"
 )
 
 type Server struct {
@@ -18,6 +19,7 @@ type Server struct {
 	logger     *slog.Logger
 	eventStore *events.Store
 	eventBus   *events.Bus
+	obsClient  obs.Client
 	version    string
 }
 
@@ -26,6 +28,7 @@ func NewServer(
 	logger *slog.Logger,
 	eventStore *events.Store,
 	eventBus *events.Bus,
+	obsClient obs.Client,
 	version string,
 ) *Server {
 	return &Server{
@@ -33,6 +36,7 @@ func NewServer(
 		logger:     logger,
 		eventStore: eventStore,
 		eventBus:   eventBus,
+		obsClient:  obsClient,
 		version:    version,
 	}
 }
@@ -44,6 +48,8 @@ func (s *Server) Start(ctx context.Context) error {
 	mux.HandleFunc("GET /time", s.handleTime)
 	mux.HandleFunc("GET /events", s.handleListEvents)
 	mux.HandleFunc("POST /events", s.handlePostEvent)
+	mux.HandleFunc("GET /obs/scenes", s.handleListScenes)
+	mux.HandleFunc("POST /obs/scenes/switch", s.handleSwitchScene)
 
 	server := &http.Server{
 		Addr:              s.address(),
@@ -108,6 +114,32 @@ func (s *Server) handleListEvents(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{
 		"events": s.eventStore.List(),
 	})
+}
+
+func (s *Server) handleListScenes(w http.ResponseWriter, r *http.Request) {
+	s.logger.Info("handleListScenes called")
+	if !s.obsClient.IsConnected() {
+		writeError(w, http.StatusServiceUnavailable, "obs_not_connected", "OBS client is not connected")
+		return
+	}
+
+	scenes, err := s.obsClient.ListScenes(r.Context())
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "obs_list_scenes_error", fmt.Sprintf("Failed to list scenes: %v", err))
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"scenes": scenes})
+}
+
+func (s *Server) handleSwitchScene(w http.ResponseWriter, r *http.Request) {
+	s.logger.Info("handleSwitchScene called")
+	if !s.obsClient.IsConnected() {
+		writeError(w, http.StatusServiceUnavailable, "obs_not_connected", "OBS client is not connected")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"message": "Switch scene endpoint is not implemented yet"})
 }
 
 type eventRequest struct {

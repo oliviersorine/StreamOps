@@ -1,6 +1,9 @@
 run:
 	go run ./cmd/streamops start
 
+format:
+	go fmt ./...
+
 test:
 	go test ./...
 

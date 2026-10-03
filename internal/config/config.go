@@ -10,6 +10,7 @@ type Config struct {
 	App     AppConfig     `yaml:"app"`
 	HTTP    HTTPConfig    `yaml:"http"`
 	Logging LoggingConfig `yaml:"logging"`
+	OBS     OBSConfig     `yaml:"obs"`
 }
 
 type AppConfig struct {
@@ -25,6 +26,12 @@ type HTTPConfig struct {
 type LoggingConfig struct {
 	Level  string `yaml:"level"`
 	Format string `yaml:"format"`
+}
+
+type OBSConfig struct {
+	Host     string `yaml:"host"`
+	Port     int    `yaml:"port"`
+	Password string `yaml:"password"`
 }
 
 func Load(path string) (Config, error) {
@@ -67,5 +74,17 @@ func applyDefaults(cfg *Config) {
 
 	if cfg.Logging.Format == "" {
 		cfg.Logging.Format = "text"
+	}
+
+	if cfg.OBS.Host == "" {
+		cfg.OBS.Host = "127.0.0.1"
+	}
+
+	if cfg.OBS.Port == 0 {
+		cfg.OBS.Port = 4455
+	}
+
+	if cfg.OBS.Password == "" {
+		cfg.OBS.Password = "streamops"
 	}
 }
